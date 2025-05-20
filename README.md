@@ -1,46 +1,127 @@
-![Banner image](https://user-images.githubusercontent.com/10284570/173569848-c624317f-42b1-45a6-ab09-f0ea3c247648.png)
+# n8n-nodes-bitrix
 
-# n8n-nodes-starter
+This is an n8n community node. It lets you use **Bitrix24** in your n8n workflows.
 
-This repo contains example nodes to help you get started building your own custom integrations for [n8n](n8n.io). It includes the node linter and other dependencies.
+**Bitrix24** is a powerful collaboration platform that includes CRM, tasks, projects, communications, and more — all in a unified workspace. This node allows you to interact with core Bitrix24 entities such as contacts, leads, companies, and deals.
 
-To make your custom node available to the community, you must create it as an npm package, and [submit it to the npm registry](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry).
+[n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/reference/license/) workflow automation platform.
 
-## Prerequisites
+[Installation](#installation)
+[Operations](#operations)
+[Credentials](#credentials)
+[Compatibility](#compatibility)
+[Usage](#usage)
+[Resources](#resources)
+[Version history](#version-history)
 
-You need the following installed on your development machine:
+---
 
-* [git](https://git-scm.com/downloads)
-* Node.js and pnpm. Minimum version Node 20. You can find instructions on how to install both using nvm (Node Version Manager) for Linux, Mac, and WSL [here](https://github.com/nvm-sh/nvm). For Windows users, refer to Microsoft's guide to [Install NodeJS on Windows](https://docs.microsoft.com/en-us/windows/dev-environment/javascript/nodejs-on-windows).
-* Install n8n with:
-  ```
-  npm install n8n -g
-  ```
-* Recommended: follow n8n's guide to [set up your development environment](https://docs.n8n.io/integrations/creating-nodes/build/node-development-environment/).
+## Installation
 
-## Using this starter
+Follow the installation guide in the n8n community nodes documentation.
 
-These are the basic steps for working with the starter. For detailed guidance on creating and publishing nodes, refer to the [documentation](https://docs.n8n.io/integrations/creating-nodes/).
+1. Go to **Settings** > **Community Nodes**.
+2. Select **Install**.
+3. Enter `n8n-nodes-bitrix` in **Enter npm package name**.
+4. Agree to the [risks](https://docs.n8n.io/integrations/community-nodes/risks/) of using community nodes: select **I understand the risks of installing unverified code from a public source**.
+5. Select **Install**. 
 
-1. [Generate a new repository](https://github.com/n8n-io/n8n-nodes-starter/generate) from this template repository.
-2. Clone your new repo:
-   ```
-   git clone https://github.com/<your organization>/<your-repo-name>.git
-   ```
-3. Run `npm i` to install dependencies.
-4. Open the project in your editor.
-5. Browse the examples in `/nodes` and `/credentials`. Modify the examples, or replace them with your own nodes.
-6. Update the `package.json` to match your details.
-7. Run `npm lint` to check for errors or `npm lintfix` to automatically fix errors when possible.
-8. Test your node locally. Refer to [Run your node locally](https://docs.n8n.io/integrations/creating-nodes/test/run-node-locally/) for guidance.
-9. Replace this README with documentation for your node. Use the [README_TEMPLATE](README_TEMPLATE.md) to get started.
-10. Update the LICENSE file to use your details.
-11. [Publish](https://docs.npmjs.com/packages-and-modules/contributing-packages-to-the-registry) your package to npm.
+After installing the node, you can use it like any other node. n8n displays the node in search results in the **Nodes** panel.
 
-## More information
 
-Refer to our [documentation on creating nodes](https://docs.n8n.io/integrations/creating-nodes/) for detailed information on building your own nodes.
+---
 
-## License
+## Operations
 
-[MIT](https://github.com/n8n-io/n8n-nodes-starter/blob/master/LICENSE.md)
+This node supports the following Bitrix24 modules and operations:
+
+### Modules
+
+* `crm.company`
+* `crm.contact`
+* `crm.deal`
+* `crm.lead`
+* (more coming soon)
+
+### Supported operations per entity:
+
+* **Create** (Add a new entity)
+* **Get** (Get an entity by ID)
+* **Update** (Update an entity by ID)
+* **Delete** (Delete an entity by ID)
+* **List** (Query/filter entities)
+* **Get Fields Description** (Fetch metadata for custom fields)
+
+Each operation supports:
+
+* **Field-by-field input** or **raw JSON** input
+* Filtering, sorting, and field selection for list queries
+
+---
+
+## Credentials
+
+This node supports two authentication methods:
+
+### 1. Bitrix Webhook
+
+Use a webhook URL from Bitrix24 (e.g. `https://yourdomain.bitrix24.ru/rest/1/abc123xyz/`).
+
+To set this up:
+
+* In Bitrix24, go to **Developer tools → Webhooks**
+* Create an inbound webhook and select required access
+* Copy the webhook URL and use it in credentials
+
+### 2. OAuth2 (Bitrix24 REST API)
+
+If you want to use OAuth2:
+
+* Create an application in Bitrix24
+* Use the client ID, secret, and domain in the OAuth2 credential
+* Supports automatic token refresh and secure API access
+
+---
+
+## Compatibility
+
+* **Tested on:** `1.92.2`
+
+Known limitations:
+
+* Some custom fields in Bitrix may require extra formatting depending on field type.
+
+---
+
+## Usage
+
+When creating or updating records, you can choose to:
+
+* Fill fields one-by-one (dynamic list of available fields is loaded)
+* Or provide the full data in raw JSON
+
+When listing entities, you can:
+
+* Use simple filters (field, operator, value)
+* Or provide complex JSON filters (e.g., combined filters, nested conditions)
+
+Field names are loaded dynamically based on selected entity (e.g., `crm.contact`), making it easier to work with custom fields.
+
+---
+
+## Resources
+
+* [n8n community nodes documentation](https://docs.n8n.io/integrations/community-nodes/)
+* [Bitrix24 REST API documentation](https://training.bitrix24.com/rest_help/)
+* [Bitrix24 Webhooks Guide](https://apidocs.bitrix24.com/local-integrations/local-webhooks.html)
+
+---
+
+## Version history
+
+| Version  | Changes                                                                                                                    |
+|----------|----------------------------------------------------------------------------------------------------------------------------|
+| 1.0.0    | Initial release with support for CRM module (contact, company, deal, lead), including create/get/update/delete/list/fields |
+| 1.1.0    | Added support for both OAuth2 and Webhook auth, improved filter and JSON input modes                                       |
+| 1.2.0    | Bug-fixes. Added Custom Method                                                                                             |
+| Upcoming | Support for tasks, users, and activity logging                                                                             |

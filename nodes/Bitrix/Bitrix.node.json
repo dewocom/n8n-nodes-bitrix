@@ -1,0 +1,18 @@
+{
+	"node": "n8n-nodes-bitrix.bitrix",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Sales", "Miscellaneous"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://apidocs.bitrix24.com/api-reference/oauth/"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://apidocs.bitrix24.com/"
+			}
+		]
+	}
+}

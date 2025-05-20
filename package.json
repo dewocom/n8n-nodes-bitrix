@@ -1,19 +1,25 @@
 {
-  "name": "n8n-nodes-<...>",
-  "version": "0.1.0",
-  "description": "",
+  "name": "n8n-nodes-bitrix",
+  "version": "1.2.0",
+  "description": "n8n node for bitrix rest api",
   "keywords": [
-    "n8n-community-node-package"
+    "n8n-nodes",
+    "n8n-nodes-bitrix",
+    "n8n-community-node-package",
+    "bitrix24",
+    "bitrix",
+    "crm",
+    "n8n"
   ],
   "license": "MIT",
   "homepage": "",
   "author": {
-    "name": "",
-    "email": ""
+    "name": "Rozinkin Pavel",
+    "email": "hello@dwc.kz"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/<...>/n8n-nodes-<...>.git"
+    "url": "https://github.com/dewocom/n8n-nodes-bitrix.git"
   },
   "engines": {
     "node": ">=20.15"
@@ -25,7 +31,7 @@
     "format": "prettier nodes credentials --write",
     "lint": "eslint nodes credentials package.json",
     "lintfix": "eslint nodes credentials package.json --fix",
-    "prepublishOnly": "npm build && npm lint -c .eslintrc.prepublish.js nodes credentials package.json"
+    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js nodes credentials package.json"
   },
   "files": [
     "dist"
@@ -33,12 +39,11 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/ExampleCredentialsApi.credentials.js",
-      "dist/credentials/HttpBinApi.credentials.js"
+      "dist/credentials/BitrixOAuth2Api.credentials.js",
+      "dist/credentials/BitrixWebhookApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/ExampleNode/ExampleNode.node.js",
-      "dist/nodes/HttpBin/HttpBin.node.js"
+      "dist/nodes/Bitrix/Bitrix.node.js"
     ]
   },
   "devDependencies": {
