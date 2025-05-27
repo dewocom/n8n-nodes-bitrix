@@ -1,4 +1,35 @@
-import type { INodeProperties } from 'n8n-workflow';
+import {
+	IDataObject,
+	IExecuteFunctions,
+	IHttpRequestMethods,
+	INodeExecutionData,
+	INodeProperties,
+	jsonParse,
+} from 'n8n-workflow';
+import { NodeOperationError } from 'n8n-workflow';
+import { bitrixApiRequest } from './GenericFunctions';
+
+interface IFilterCondition {
+	field: string;
+	operation: string;
+	value: string;
+}
+
+interface IOrderCondition {
+	field: string;
+	direction: string;
+}
+
+interface IListParameters {
+	select?: string[];
+	filter?: {
+		property?: IFilterCondition[];
+	};
+	order?: {
+		property?: IOrderCondition[];
+	};
+	start?: number;
+}
 
 export const operations: INodeProperties[] = [
 	{
@@ -68,9 +99,9 @@ export const fields: INodeProperties[] = [
 				operation: ['get', 'update', 'delete'],
 			},
 		},
-		description: 'ID of the record to operate on',
+		description: 'The ID of the record to operate on',
+		placeholder: 'e.g. 12345',
 	},
-
 	/* -------------------------------------------------------------------------- */
 	/*                                 add/update                                 */
 	/* -------------------------------------------------------------------------- */
@@ -93,9 +124,10 @@ export const fields: INodeProperties[] = [
 		default: 'fields',
 		displayOptions: {
 			show: {
-				operation: ['add', 'update'],
+				operation: ['add', 'update', 'list'],
 			},
 		},
+		description: 'Choose how to provide input data',
 	},
 	{
 		displayName: 'Fields',
@@ -114,13 +146,14 @@ export const fields: INodeProperties[] = [
 				inputType: ['fields'],
 			},
 		},
+		description: 'Field values to set',
 		options: [
 			{
-				displayName: 'Field',
-				name: 'field',
+				displayName: 'Values',
+				name: 'values',
 				values: [
 					{
-						displayName: 'Field Name or ID',
+						displayName: 'Name or ID',
 						name: 'name',
 						type: 'options',
 						typeOptions: {
@@ -128,71 +161,50 @@ export const fields: INodeProperties[] = [
 							loadOptionsDependsOn: ['resource'],
 						},
 						default: '',
-						description: 'Select field from entity. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+						description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
 					},
 					{
-						displayName: 'Field Value',
+						displayName: 'Value',
 						name: 'value',
 						type: 'string',
 						default: '',
-						description: 'Enter field value',
+						description: 'Field value',
 					},
 				],
 			},
 		],
 	},
 	{
-		displayName: 'JSON Data',
-		name: 'jsonData',
+		displayName: 'JSON Body',
+		name: 'jsonBody',
 		type: 'json',
 		default: '',
 		description: 'Provide complete data in JSON format',
 		displayOptions: {
 			show: {
-				operation: ['add', 'update'],
+				operation: ['add', 'update', 'list'],
 				inputType: ['json'],
 			},
 		},
 	},
 
+
 	/* -------------------------------------------------------------------------- */
 	/*                                    list                                    */
 	/* -------------------------------------------------------------------------- */
 	{
-		displayName: 'Input Type',
-		name: 'inputType',
-		type: 'options',
-		options: [
-			{
-				name: 'Using Filters',
-				value: 'filters',
-				description: 'Build filters step by step',
-			},
-			{
-				name: 'Using JSON Query',
-				value: 'json',
-				description: 'Provide complete filter in JSON',
-			},
-		],
-		default: 'filters',
-		displayOptions: {
-			show: {
-				operation: ['list'],
-			},
-		},
-	},
-	{
-		displayName: 'Filters',
-		name: 'filters',
+		displayName: 'Parameters',
+		name: 'parameters',
 		type: 'collection',
-		placeholder: 'Add Filter',
+		placeholder: 'Add Parameter',
 		default: {},
 		displayOptions: {
 			show: {
 				operation: ['list'],
-				inputType: ['filters'],
+				inputType: ['fields'],
 			},
 		},
+		// eslint-disable-next-line n8n-nodes-base/node-param-collection-type-unsorted-items
 		options: [
 			{
 				displayName: 'Select Names or IDs',
@@ -204,6 +216,64 @@ export const fields: INodeProperties[] = [
 					loadOptionsMethod: 'getEntityFields',
 					loadOptionsDependsOn: ['resource'],
 				},
+			},
+			{
+				displayName: 'Filter Conditions',
+				name: 'filter',
+				type: 'fixedCollection',
+				placeholder: 'Add Filter',
+				typeOptions: {
+					multipleValues: true,
+					sortable: true,
+				},
+				default: {},
+				options: [
+					{
+						displayName: 'Field',
+						name: 'property',
+						values: [
+							{
+								displayName: 'Name or ID',
+								name: 'field',
+								type: 'options',
+								typeOptions: {
+									loadOptionsMethod: 'getEntityFields',
+									loadOptionsDependsOn: ['resource'],
+								},
+								default: '',
+								description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+							},
+							{
+								displayName: 'Operation',
+								name: 'operation',
+								type: 'options',
+								noDataExpression: true,
+								options: [
+									{ name: 'Contains', value: '%' },
+									{ name: 'Ends With', value: '%=' },
+									{ name: 'Equals', value: '=' },
+									{ name: 'Greater Than', value: '>' },
+									{ name: 'Greater Than Or Equal', value: '>=' },
+									{ name: 'In List', value: '@' },
+									{ name: 'Less Than', value: '<' },
+									{ name: 'Less Than Or Equal', value: '<=' },
+									{ name: 'Not Contains', value: '!%' },
+									{ name: 'Not Equals', value: '!=' },
+									{ name: 'Not In List', value: '!@' },
+									{ name: 'Starts With', value: '=%' },
+								],
+								default: '=',
+							},
+							{
+								displayName: 'Value',
+								name: 'value',
+								type: 'string',
+								default: '',
+								description: 'Value to compare with',
+							},
+						],
+					},
+				],
 			},
 			{
 				displayName: 'Order',
@@ -252,54 +322,128 @@ export const fields: INodeProperties[] = [
 				],
 			},
 			{
-				displayName: 'Filter',
-				name: 'filter',
-				type: 'fixedCollection',
-				placeholder: 'Add Filter Condition',
-				typeOptions: {
-					multipleValues: true,
-				},
-				default: {},
-				options: [
-					{
-						displayName: 'Property',
-						name: 'property',
-						values: [
-							{
-								displayName: 'Field Name or ID',
-								name: 'field',
-								type: 'options',
-								typeOptions: {
-									loadOptionsMethod: 'getEntityFields',
-									loadOptionsDependsOn: ['resource'],
-								},
-								default: '',
-								description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
-							},
-							{
-								displayName: 'Value',
-								name: 'value',
-								type: 'string',
-								default: '',
-								description: 'Value to compare with',
-							},
-						],
-					},
-				],
+				displayName: 'Start',
+				name: 'start',
+				type: 'number',
+				default: 0,
 			},
 		]
 	},
-	{
-		displayName: 'JSON Query',
-		name: 'jsonQuery',
-		type: 'json',
-		default: '',
-		description: 'Provide complete filter in JSON format (e.g., {"select": ["ID", "TITLE"], "filter": {"STAGE_ID": "NEW"}})',
-		displayOptions: {
-			show: {
-				operation: ['list'],
-				inputType: ['json'],
-			},
-		},
-	},
 ];
+
+export async function execute(
+	this: IExecuteFunctions,
+	index: number,
+): Promise<INodeExecutionData[]> {
+	const operation = this.getNodeParameter('operation', index);
+	const resource = this.getNodeParameter('resource', index) as string;
+
+	let requestMethod: IHttpRequestMethods = 'POST';
+	let endpoint: string;
+	let body: IDataObject = {};
+	let qs: IDataObject = {};
+	let inputType: string;
+
+	endpoint = `${resource}.${operation}`;
+	switch (operation) {
+		case 'get':
+		case 'delete': {
+			requestMethod = 'GET';
+			const id = this.getNodeParameter('id', index) as number;
+			if (!id) throw new NodeOperationError(this.getNode(), 'Missing ID parameter');
+			qs.id = id;
+			break;
+		}
+
+		case 'list': {
+			inputType = this.getNodeParameter('inputType', index) as string;
+
+			if (inputType === 'json') {
+				const jsonBody = this.getNodeParameter('jsonBody', index, '{}') as string;
+				try {
+					Object.assign(body, jsonParse(jsonBody));
+				} catch (err) {
+					throw new NodeOperationError(this.getNode(), 'Invalid JSON query format', {
+						itemIndex: index,
+						description: 'Please provide valid JSON. Error:' + err.message,
+					});
+				}
+			} else {
+				requestMethod = 'GET';
+
+				const parameters = this.getNodeParameter('parameters', index, {}) as IListParameters;
+
+				if (parameters.select) {
+					qs.select = parameters.select;
+				}
+
+				if (parameters.filter?.property) {
+					qs.filter = {} as Record<string, any>;
+
+					parameters.filter.property.forEach(condition => {
+						const filterKey = `${condition.operation}${condition.field}`;
+
+						if (condition.operation === '@' || condition.operation === '!@') {
+							(qs.filter as Record<string, any>)[filterKey] =
+								condition.value.split(',').map(v => v.trim());
+						} else {
+							(qs.filter as Record<string, any>)[filterKey] = condition.value;
+						}
+					});
+				}
+
+				if (parameters.order?.property) {
+					qs.order = {} as Record<string, string>;
+					parameters.order.property.forEach(condition => {
+						(qs.order as Record<string, string>)[condition.field] = condition.direction;
+					});
+				}
+
+				if (parameters.start !== undefined) {
+					qs.start = parameters.start;
+				}
+			}
+			break;
+		}
+		case 'add':
+		case 'update': {
+			inputType = this.getNodeParameter('inputType', index) as string;
+			let fields;
+			if (inputType === 'json') {
+				const jsonBody = this.getNodeParameter('jsonBody', index, '{}') as string;
+				try {
+					fields = jsonParse(jsonBody);
+				} catch (err) {
+					throw new NodeOperationError(this.getNode(), 'Invalid JSON in fields', {
+						description: 'Please provide valid JSON.',
+					});
+				}
+			} else {
+				fields = this.getNodeParameter('fields', index, {}) as IDataObject;
+			}
+
+			if (!fields || Object.keys(fields).length === 0) {
+				throw new NodeOperationError(this.getNode(), 'Fields cannot be empty');
+			}
+
+			body.fields = fields;
+			if (operation === 'update') {
+				const id = this.getNodeParameter('id', index) as number;
+				if (!id) throw new NodeOperationError(this.getNode(), 'Missing ID for update');
+				qs.id = id;
+			}
+			break;
+		}
+
+		case 'fields': {
+			body = {};
+			break;
+		}
+
+		default:
+			throw new NodeOperationError(this.getNode(), `Unsupported operation: ${operation}`);
+	}
+
+	const responseData = await bitrixApiRequest.call(this, requestMethod, endpoint, body, qs);
+	return this.helpers.returnJsonArray(responseData as IDataObject[]);
+}

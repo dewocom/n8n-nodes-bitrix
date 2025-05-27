@@ -62,3 +62,41 @@ export async function bitrixApiRequest(
 		throw new NodeApiError(this.getNode(), error as JsonObject);
 	}
 }
+
+export function processParameters(parameters: Array<{ name: string; value: string }>): IDataObject {
+	const result: IDataObject = {};
+
+	for (const param of parameters) {
+		if (!param.name) continue;
+
+		const keys = param.name.split('.');
+		let current: any = result;
+
+		for (let i = 0; i < keys.length; i++) {
+			const key = keys[i];
+			const isLast = i === keys.length - 1;
+
+			if (isLast) {
+				const arrayMatch = key.match(/(.*)\[(\d+)]$/);
+				if (arrayMatch) {
+					const arrayKey = arrayMatch[1];
+					const index = parseInt(arrayMatch[2], 10);
+
+					if (!current[arrayKey]) {
+						current[arrayKey] = [];
+					}
+					current[arrayKey][index] = param.value;
+				} else {
+					current[key] = param.value;
+				}
+			} else {
+				if (!current[key]) {
+					current[key] = {};
+				}
+				current = current[key];
+			}
+		}
+	}
+
+	return result;
+}
