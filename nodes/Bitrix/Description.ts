@@ -408,18 +408,31 @@ export async function execute(
 		case 'add':
 		case 'update': {
 			inputType = this.getNodeParameter('inputType', index) as string;
-			let fields;
+			let fields: IDataObject = {};
 			if (inputType === 'json') {
 				const jsonBody = this.getNodeParameter('jsonBody', index, '{}') as string;
 				try {
 					fields = jsonParse(jsonBody);
 				} catch (err) {
-					throw new NodeOperationError(this.getNode(), 'Invalid JSON in fields', {
+					throw new NodeOperationError(this.getNode(), 'Invalid JSON data', {
+						itemIndex: index,
 						description: 'Please provide valid JSON.',
 					});
 				}
 			} else {
-				fields = this.getNodeParameter('fields', index, {}) as IDataObject;
+				const fieldsData = this.getNodeParameter('fields', index, {}) as {
+					values?: Array<{
+						name: string;
+						value: string;
+					}>;
+				};
+
+				fields = {};
+				if (fieldsData.values) {
+					fieldsData.values.forEach(({name, value}) => {
+						if (name) fields[name] = value;
+					});
+				}
 			}
 
 			if (!fields || Object.keys(fields).length === 0) {
@@ -427,9 +440,10 @@ export async function execute(
 			}
 
 			body.fields = fields;
+
 			if (operation === 'update') {
 				const id = this.getNodeParameter('id', index) as number;
-				if (!id) throw new NodeOperationError(this.getNode(), 'Missing ID for update');
+				if (!id) throw new NodeOperationError(this.getNode(), 'Missing ID for update', { itemIndex: index });
 				qs.id = id;
 			}
 			break;
