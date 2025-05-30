@@ -123,5 +123,6 @@ Field names are loaded dynamically based on selected entity (e.g., `crm.contact`
 |----------|----------------------------------------------------------------------------------------------------------------------------|
 | 1.0.0    | Initial release with support for CRM module (contact, company, deal, lead), including create/get/update/delete/list/fields |
 | 1.1.0    | Added support for both OAuth2 and Webhook auth, improved filter and JSON input modes                                       |
-| 1.2.0    | Bug-fixes. Added Custom Method                                                                                             |
+| 1.2.x    | Bug-fixes. Added Custom Method                                                                                             |
+| 1.3.x    | Added Universal Methods for Core Elements ( crm.item.* )                                                                   |
 | Upcoming | Support for tasks, users, and activity logging                                                                             |

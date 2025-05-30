@@ -61,7 +61,7 @@ export class Bitrix implements INodeType {
 				default: 'bitrixOAuth2Api',
 			},
 			{
-				displayName: '',
+				displayName: 'Resource',
 				name: 'resource',
 				type: 'options',
 				noDataExpression: true,
@@ -69,6 +69,7 @@ export class Bitrix implements INodeType {
 					{ name: 'Company', value: 'crm.company' },
 					{ name: 'Contact', value: 'crm.contact' },
 					{ name: 'Deal', value: 'crm.deal' },
+					{ name: 'Item', value: 'crm.item' },
 					{ name: 'Lead', value: 'crm.lead' },
 					{ name: 'User Custom Method', value: 'custom' },
 				],

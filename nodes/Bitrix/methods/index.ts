@@ -1,4 +1,4 @@
-import { ILoadOptionsFunctions, INodePropertyOptions, NodeOperationError } from 'n8n-workflow';
+import { IDataObject, ILoadOptionsFunctions, INodePropertyOptions, NodeOperationError } from 'n8n-workflow';
 import { bitrixApiRequest } from '../GenericFunctions';
 
 interface BXField {
@@ -14,33 +14,92 @@ interface BXField {
 export async function getEntityFields(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 	const resource = this.getNodeParameter('resource', 0) as string;
 	const endpoint = `${resource}.fields`;
+	let body: IDataObject = {};
 
 	try {
-		const responseData = await bitrixApiRequest.call(this, 'POST', endpoint, {});
+		if (resource === 'crm.item') {
+			const entityTypeId = this.getNodeParameter('entityTypeId', 0) as string;
+
+			if (!entityTypeId) {
+				throw new NodeOperationError(
+					this.getNode(),
+					'Entity Type ID is required for crm.item',
+					{ description: 'Please select entity type first' }
+				);
+			}
+
+			body.entityTypeId = entityTypeId;
+			body.useOriginalUfNames = this.getNodeParameter('useOriginalUfNames', false) as boolean ? 'Y' : 'N';
+		}
+
+		const responseData = await bitrixApiRequest.call(this, 'POST', endpoint, body);
 		if (!responseData?.result || typeof responseData.result !== 'object') {
 			throw new NodeOperationError(this.getNode(), 'No valid fields data returned');
 		}
 
-		return Object.entries(responseData.result as Record<string, BXField>).map(([key, field]) => {
-			const fieldType = field.type || 'unknown';
+		const fieldsData = resource === 'crm.item'
+			? responseData.result?.fields || {}
+			: responseData.result;
 
-			const displayName = field?.title && field.title !== key
-				? `${field.title} (${key})`
-				: key;
+		if (!Object.keys(fieldsData).length) {
+			throw new NodeOperationError(this.getNode(), 'No fields available for selected entity');
+		}
 
-			const descriptionParts = [`Type: ${fieldType}`];
-			if (field.isRequired) descriptionParts.push('Required');
-			if (field.isReadOnly) descriptionParts.push('Read-only');
+		return Object.entries(fieldsData as Record<string, BXField>).map(([fieldName, field]) => {
+			const fieldType = field.type || 'string';
+
+			const displayName = field?.title && field.title !== fieldName
+				? `${field.title} (${fieldName})`
+				: fieldName;
+
+			const descriptionParts = [
+				`Type: ${fieldType}`,
+				...(field.isRequired ? ['Required'] : []),
+				...(field.isReadOnly ? ['Read-only'] : []),
+				...(field.isDynamic ? ['Dynamic'] : []),
+				...(field.isMultiple ? ['Multiple'] : [])
+			];
 
 			return {
 				name: displayName,
-				value: key,
+				value: fieldName,
 				description: descriptionParts.join(' | '),
-				action: field.type || 'string',
+				action: field.type
 			};
 		});
 
 	} catch (error) {
 		throw new Error(`Bitrix24 Error: ${error.message}`);
+	}
+};
+
+export async function getEntityTypes(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+	return [
+		// System type
+		{ name: 'Lead', value: '1' },
+		{ name: 'Deal', value: '2' },
+		{ name: 'Contact', value: '3' },
+		{ name: 'Company', value: '4' },
+		{ name: 'Invoice', value: '31' },
+		{ name: 'Quote', value: '32' },
+
+		// User-defined type
+		...(await getCustomEntityTypes.call(this))
+	];
+};
+
+async function getCustomEntityTypes(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+	try {
+		const types = await bitrixApiRequest.call(
+			this,
+			'GET',
+			'crm.type.list'
+		);
+		return types.result.map((type: any) => ({
+			name: type.NAME,
+			value: type.ENTITY_TYPE_ID
+		}));
+	} catch (error) {
+		return [];
 	}
 };

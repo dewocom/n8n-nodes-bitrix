@@ -32,6 +32,26 @@ interface IListParameters {
 }
 
 export const operations: INodeProperties[] = [
+	/* -------------------------------------------------------------------------- */
+	/*                                    item                                    */
+	/* -------------------------------------------------------------------------- */
+	{
+		displayName: 'Entity Type Name or ID',
+		name: 'entityTypeId',
+		type: 'options',
+		typeOptions: {
+			loadOptionsMethod: 'getEntityTypes',
+		},
+		required: true,
+		default: '',
+		displayOptions: {
+			show: {
+				resource: ['crm.item'],
+			},
+		},
+		description: 'Identifier of the system or user-defined type. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+		placeholder: 'e.g. 2',
+	},
 	{
 		displayName: 'Operation',
 		name: 'operation',
@@ -39,7 +59,7 @@ export const operations: INodeProperties[] = [
 		noDataExpression: true,
 		displayOptions: {
 			show: {
-				resource: ['crm.company', 'crm.contact', 'crm.deal', 'crm.lead'],
+				resource: ['crm.company', 'crm.contact', 'crm.deal', 'crm.item', 'crm.lead'],
 			},
 		},
 		options: [
@@ -329,6 +349,21 @@ export const fields: INodeProperties[] = [
 			},
 		]
 	},
+	{
+		displayName: 'Use Original UF Names',
+		name: 'useOriginalUfNames',
+		type: 'boolean',
+		default: false,
+		displayOptions: {
+			show: {
+				resource: ['crm.item'],
+			},
+			hide: {
+				operation: ['delete'],
+			},
+		},
+		description: 'Whether to use original UF_CRM prefix for custom field names',
+	},
 ];
 
 export async function execute(
@@ -345,6 +380,16 @@ export async function execute(
 	let inputType: string;
 
 	endpoint = `${resource}.${operation}`;
+	if (resource === 'crm.item') {
+		const entityTypeId = this.getNodeParameter('entityTypeId', index) as number;
+		if (!entityTypeId) throw new NodeOperationError(this.getNode(), 'Missing Entity Type ID parameter');
+		qs.entityTypeId = entityTypeId;
+
+		if (operation !== 'delete') {
+			qs.useOriginalUfNames = this.getNodeParameter('useOriginalUfNames', index, false) as boolean ? 'Y' : 'N';
+		}
+	}
+
 	switch (operation) {
 		case 'get':
 		case 'delete': {
@@ -443,7 +488,7 @@ export async function execute(
 
 			if (operation === 'update') {
 				const id = this.getNodeParameter('id', index) as number;
-				if (!id) throw new NodeOperationError(this.getNode(), 'Missing ID for update', { itemIndex: index });
+				if (!id) throw new NodeOperationError(this.getNode(), 'ID parameter is required for update', { itemIndex: index });
 				qs.id = id;
 			}
 			break;
